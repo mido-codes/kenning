@@ -8,7 +8,7 @@
 		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>io.github.mido-codes</groupId>
+	<groupId>io.github.mido</groupId>
 	<artifactId>kenning</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>kenning</name>
@@ -96,6 +96,15 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-tika-document-reader</artifactId>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>

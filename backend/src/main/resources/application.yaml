@@ -28,5 +28,12 @@ spring:
       chat:
         model: llama3.2:3b
 
+    vectorstore:
+      pgvector:
+        index-type: hnsw
+        distance-type: cosine_distance
+        dimensions: 768
+        initialize-schema: true
+
 server:
   port: 8080
