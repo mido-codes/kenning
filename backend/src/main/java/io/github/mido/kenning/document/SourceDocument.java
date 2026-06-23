@@ -31,7 +31,6 @@ public class SourceDocument {
 
     private Instant createdAt;
 
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
