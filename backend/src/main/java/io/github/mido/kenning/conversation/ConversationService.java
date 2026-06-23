@@ -17,13 +17,15 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final DocumentService documentService  ;
     private final MessageService messageService;
+    private final MessageRepository messageRepository;
     private final VectorStore vectorStore;
     private final ChatClient chatClient;
 
-    public ConversationService(ConversationRepository conversationRepository, DocumentService documentService, MessageService messageService, VectorStore vectorStore, ChatClient.Builder chatClientBuilder) {
+    public ConversationService(ConversationRepository conversationRepository, DocumentService documentService, MessageService messageService, MessageRepository messageRepository, VectorStore vectorStore, ChatClient.Builder chatClientBuilder) {
         this.conversationRepository = conversationRepository;
         this.documentService = documentService;
         this.messageService = messageService;
+        this.messageRepository = messageRepository;
         this.vectorStore = vectorStore;
         this.chatClient = chatClientBuilder.build();
     }
@@ -36,6 +38,15 @@ public class ConversationService {
                 .build();
 
         return this.conversationRepository.save(newConversation);
+    }
+
+    public void deleteConversation(UUID id) {
+        if (!conversationRepository.existsById(id)) {
+            throw new ConversationNotFoundException("Conversation not found: " + id);
+        }
+        List<Message> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(id);
+        messageRepository.deleteAll(messages);
+        conversationRepository.deleteById(id);
     }
 
     public Message askQuestion(UUID conversationId, String question) {
@@ -59,6 +70,13 @@ public class ConversationService {
     public Conversation getConversation(UUID id) {
        return this.conversationRepository.findById(id)
                 .orElseThrow(() -> new ConversationNotFoundException("Conversation not found: " + id));
+    }
+
+    public ConversationDetailResponse getConversationWithMessages(UUID id) {
+        Conversation conversation = getConversation(id);
+        List<Message> messageList = messageRepository.findByConversationIdOrderByCreatedAtAsc(id);
+
+        return new ConversationDetailResponse(conversation, messageList);
     }
 
 

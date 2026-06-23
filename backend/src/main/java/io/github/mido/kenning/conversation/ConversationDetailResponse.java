@@ -1,4 +1,7 @@
 package io.github.mido.kenning.conversation;
 
-public record ConversationDetailResponse() {
-}
+import java.util.List;
+
+public record ConversationDetailResponse(
+        Conversation conversation,
+        List<Message> messages) {}

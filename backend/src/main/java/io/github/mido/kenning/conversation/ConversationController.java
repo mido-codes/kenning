@@ -15,8 +15,14 @@ public class ConversationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Conversation> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(conversationService.getConversation(id));
+    public ResponseEntity<ConversationDetailResponse> get(@PathVariable UUID id) {
+        return ResponseEntity.ok(conversationService.getConversationWithMessages(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        conversationService.deleteConversation(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping()
