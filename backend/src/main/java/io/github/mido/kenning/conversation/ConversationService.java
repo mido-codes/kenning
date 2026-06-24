@@ -1,5 +1,6 @@
 package io.github.mido.kenning.conversation;
 
+import tools.jackson.databind.ObjectMapper;
 import io.github.mido.kenning.document.DocumentService;
 import io.github.mido.kenning.document.SourceDocument;
 import org.springframework.ai.chat.client.ChatClient;
@@ -14,20 +15,24 @@ import java.util.stream.Collectors;
 
 @Service
 public class ConversationService {
+    private static final double SIMILARITY_THRESHOLD = 0.3; // TODO tuning with manual test
+
     private final ConversationRepository conversationRepository;
     private final DocumentService documentService  ;
     private final MessageService messageService;
     private final MessageRepository messageRepository;
     private final VectorStore vectorStore;
     private final ChatClient chatClient;
+    private final ObjectMapper objectMapper;
 
-    public ConversationService(ConversationRepository conversationRepository, DocumentService documentService, MessageService messageService, MessageRepository messageRepository, VectorStore vectorStore, ChatClient.Builder chatClientBuilder) {
+    public ConversationService(ConversationRepository conversationRepository, DocumentService documentService, MessageService messageService, MessageRepository messageRepository, VectorStore vectorStore, ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper) {
         this.conversationRepository = conversationRepository;
         this.documentService = documentService;
         this.messageService = messageService;
         this.messageRepository = messageRepository;
         this.vectorStore = vectorStore;
         this.chatClient = chatClientBuilder.build();
+        this.objectMapper = objectMapper;
     }
 
     public Conversation createConversation(UUID documentId){
@@ -55,17 +60,26 @@ public class ConversationService {
         SearchRequest request = SearchRequest.builder()
                 .query(question)
                 .topK(5)
-                .filterExpression("documentId == '" + conversation.getDocument().getId()  + "'")
+                .similarityThreshold(SIMILARITY_THRESHOLD)
+                .filterExpression("documentId == '" + conversation.getDocument().getId() + "'")
                 .build();
 
         List<Document> similarChunks = vectorStore.similaritySearch(request);
-        String context = convertChunks(similarChunks);
-
-        String answer = prompt(question, context);
 
         messageService.createUserMessage(conversation, question);
-        return messageService.createAssistantMessage(conversation, answer, context);
+
+        if (similarChunks.isEmpty()) {
+            String fallback = "I couldn't find relevant information in this document to answer that question.";
+            return messageService.createAssistantMessage(conversation, fallback, "[]");
+        }
+
+        String context = convertChunks(similarChunks);
+        String answer = prompt(question, context);
+        String sourcesJson = toSourcesJson(similarChunks);
+
+        return messageService.createAssistantMessage(conversation, answer, sourcesJson);
     }
+
 
     public Conversation getConversation(UUID id) {
        return this.conversationRepository.findById(id)
@@ -92,6 +106,18 @@ public class ConversationService {
         return chunks.stream()
                 .map(Document::getText)
                 .collect(Collectors.joining("\n\n"));
+    }
+
+    private String toSourcesJson(List<Document> chunks) {
+        List<SourceReference> sources = chunks.stream()
+                .map(chunk -> new SourceReference(chunk.getText(), chunk.getScore()))
+                .toList();
+
+        try {
+            return objectMapper.writeValueAsString(sources);
+        } catch (Exception e) {
+            return "[]";
+        }
     }
 }
 
