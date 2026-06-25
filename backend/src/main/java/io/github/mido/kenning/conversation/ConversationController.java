@@ -3,15 +3,21 @@ package io.github.mido.kenning.conversation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/conversation")
+@RequestMapping("/api/conversations")
 public class ConversationController {
     private final ConversationService conversationService;
 
     public ConversationController(ConversationService conversationService) {
         this.conversationService = conversationService;
+    }
+
+    @GetMapping()
+    public ResponseEntity<List<Conversation>> getAll() {
+        return ResponseEntity.ok(conversationService.getAllConversations());
     }
 
     @GetMapping("/{id}")

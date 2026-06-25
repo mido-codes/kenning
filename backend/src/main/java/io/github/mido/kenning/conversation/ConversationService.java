@@ -1,5 +1,7 @@
 package io.github.mido.kenning.conversation;
 
+import io.github.mido.kenning.user.CurrentUserService;
+import io.github.mido.kenning.user.User;
 import tools.jackson.databind.ObjectMapper;
 import io.github.mido.kenning.document.DocumentService;
 import io.github.mido.kenning.document.SourceDocument;
@@ -24,8 +26,9 @@ public class ConversationService {
     private final VectorStore vectorStore;
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
+    private final CurrentUserService currentUserService;
 
-    public ConversationService(ConversationRepository conversationRepository, DocumentService documentService, MessageService messageService, MessageRepository messageRepository, VectorStore vectorStore, ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper) {
+    public ConversationService(ConversationRepository conversationRepository, DocumentService documentService, MessageService messageService, MessageRepository messageRepository, VectorStore vectorStore, ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper, CurrentUserService currentUserService) {
         this.conversationRepository = conversationRepository;
         this.documentService = documentService;
         this.messageService = messageService;
@@ -33,12 +36,14 @@ public class ConversationService {
         this.vectorStore = vectorStore;
         this.chatClient = chatClientBuilder.build();
         this.objectMapper = objectMapper;
+        this.currentUserService = currentUserService;
     }
 
     public Conversation createConversation(UUID documentId){
         SourceDocument sourceDocument = this.documentService.getDocument(documentId);
         Conversation newConversation = Conversation.builder()
                 .title(sourceDocument.getFilename())
+                .user(currentUserService.getCurrentUser())
                 .document(sourceDocument)
                 .build();
 
@@ -46,12 +51,13 @@ public class ConversationService {
     }
 
     public void deleteConversation(UUID id) {
-        if (!conversationRepository.existsById(id)) {
-            throw new ConversationNotFoundException("Conversation not found: " + id);
-        }
+        User currentUser = this.currentUserService.getCurrentUser();
+        Conversation conversation = conversationRepository.findByIdAndUserId(id, currentUser.getId())
+                .orElseThrow(() -> new ConversationNotFoundException("Conversation not found: " + id));
+
         List<Message> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(id);
         messageRepository.deleteAll(messages);
-        conversationRepository.deleteById(id);
+        conversationRepository.delete(conversation);
     }
 
     public Message askQuestion(UUID conversationId, String question) {
@@ -61,7 +67,7 @@ public class ConversationService {
                 .query(question)
                 .topK(5)
                 .similarityThreshold(SIMILARITY_THRESHOLD)
-                .filterExpression("documentId == '" + conversation.getDocument().getId() + "'")
+                .filterExpression("documentId == '" + conversation.getDocument().getId() + "' && userId == '" + conversation.getUser().getId() + "'")
                 .build();
 
         List<Document> similarChunks = vectorStore.similaritySearch(request);
@@ -80,9 +86,16 @@ public class ConversationService {
         return messageService.createAssistantMessage(conversation, answer, sourcesJson);
     }
 
+    public List<Conversation> getAllConversations() {
+        User currentUser = currentUserService.getCurrentUser();
+        return conversationRepository.findByUserId(currentUser.getId());
+    }
+
 
     public Conversation getConversation(UUID id) {
-       return this.conversationRepository.findById(id)
+        User currentUser = currentUserService.getCurrentUser();
+
+        return this.conversationRepository.findByIdAndUserId(id, currentUser.getId())
                 .orElseThrow(() -> new ConversationNotFoundException("Conversation not found: " + id));
     }
 

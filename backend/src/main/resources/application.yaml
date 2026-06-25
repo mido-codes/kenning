@@ -5,6 +5,14 @@ spring:
     compose:
       enabled: false
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/kenning}
     username: ${DB_USER:app}
@@ -34,6 +42,9 @@ spring:
         distance-type: cosine_distance
         dimensions: 768
         initialize-schema: true
+
+app:
+  frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
 
 server:
   port: 8080

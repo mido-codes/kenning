@@ -35,7 +35,7 @@ public class DocumentController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping
+    @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<SourceDocument> upload(@RequestParam("file") MultipartFile file) throws IOException {
         SourceDocument document = documentService.uploadDocument(file);
         return ResponseEntity.status(HttpStatus.CREATED).body(document);

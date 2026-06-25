@@ -1,5 +1,6 @@
 package io.github.mido.kenning.document;
 
+import io.github.mido.kenning.user.User;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,6 +18,10 @@ public class SourceDocument {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     private String filename;
     private String contentType;

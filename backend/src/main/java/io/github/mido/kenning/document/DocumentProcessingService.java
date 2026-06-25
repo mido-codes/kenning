@@ -22,7 +22,7 @@ public class DocumentProcessingService {
     }
 
     @Async
-    public void processDocument(UUID documentId, byte[] fileContent) {
+    public void processDocument(UUID documentId, UUID userId, byte[] fileContent) {
         try {
             ByteArrayResource resource = new ByteArrayResource(fileContent);
             TikaDocumentReader reader = new TikaDocumentReader(resource);
@@ -33,6 +33,7 @@ public class DocumentProcessingService {
 
             for (Document chunk : chunks) {
                 chunk.getMetadata().put("documentId", documentId.toString());
+                chunk.getMetadata().put("userId", userId.toString());
             }
 
             vectorStore.add(chunks);
