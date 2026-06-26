@@ -1,6 +1,7 @@
 package io.github.mido.kenning.config;
 
 import io.github.mido.kenning.user.CustomOAuth2UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +33,15 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(customOAuth2UserService))
                         .defaultSuccessUrl(frontendBaseUrl)
                 )
-                .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
+                .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+                .logout(logout -> logout
+                        .logoutUrl("/api/logout")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                        })
+                        .deleteCookies("JSESSIONID", "XSRF-TOKEN")
+                        .invalidateHttpSession(true)
+                );
 
         return http.build();
     }
