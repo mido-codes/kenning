@@ -19,7 +19,7 @@ export class ConversationService {
 
   sendMessage(conversationId: string, question: string): Observable<Message> {
     return this.http.post<Message>(
-      `/api/conversations/${conversationId}/messages`,
+      `/api/conversations/${conversationId}/message`,
       null,
       { params: new HttpParams().set('question', question) },
     );
