@@ -9,9 +9,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConversationService } from '../../core/services/conversation.service';
 import type { Conversation, Message, SourceReference } from '../../core/models/conversation.model';
 
@@ -24,13 +25,15 @@ interface DisplayMessage extends Message {
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, Toast],
+  imports: [RouterLink, Toast, ConfirmDialog],
 })
 export class Chat implements OnInit {
   readonly id = input.required<string>();
 
   private readonly conversationService = inject(ConversationService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
 
   private readonly messagesEnd = viewChild<ElementRef<HTMLDivElement>>('messagesEnd');
   private readonly textarea = viewChild<ElementRef<HTMLTextAreaElement>>('textarea');
@@ -39,6 +42,7 @@ export class Chat implements OnInit {
   readonly messages = signal<DisplayMessage[]>([]);
   readonly loadingConversation = signal(true);
   readonly sending = signal(false);
+  readonly deleting = signal(false);
   readonly question = signal('');
   readonly loadError = signal(false);
   readonly expandedSourceIds = signal(new Set<string>());
@@ -97,6 +101,33 @@ export class Chat implements OnInit {
           severity: 'error',
           summary: 'Failed to send',
           detail: 'Could not get a response. Please try again.',
+        });
+      },
+    });
+  }
+
+  confirmDelete(): void {
+    this.confirmationService.confirm({
+      message: 'Delete this conversation? All messages will be lost.',
+      header: 'Delete conversation',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.deleteConversation(),
+    });
+  }
+
+  private deleteConversation(): void {
+    this.deleting.set(true);
+    this.conversationService.delete(this.id()).subscribe({
+      next: () => this.router.navigate(['/documents']),
+      error: () => {
+        this.deleting.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Delete failed',
+          detail: 'Could not delete the conversation. Please try again.',
         });
       },
     });

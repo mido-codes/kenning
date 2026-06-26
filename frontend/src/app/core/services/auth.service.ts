@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, of } from 'rxjs';
+import type { Observable } from 'rxjs';
+import { catchError, map, of } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -23,5 +24,9 @@ export class AuthService {
 
   login(): void {
     window.location.href = '/oauth2/authorization/google';
+  }
+
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/logout', null);
   }
 }
