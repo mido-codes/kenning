@@ -41,13 +41,17 @@ public class ConversationService {
 
     public Conversation createConversation(UUID documentId){
         SourceDocument sourceDocument = this.documentService.getDocument(documentId);
-        Conversation newConversation = Conversation.builder()
-                .title(sourceDocument.getFilename())
-                .user(currentUserService.getCurrentUser())
-                .document(sourceDocument)
-                .build();
+        User currentUser = currentUserService.getCurrentUser();
 
-        return this.conversationRepository.save(newConversation);
+        return conversationRepository.findByDocumentIdAndUserId(documentId, currentUser.getId())
+                .orElseGet(() -> {
+                    Conversation newConversation = Conversation.builder()
+                            .title(sourceDocument.getFilename())
+                            .user(currentUserService.getCurrentUser())
+                            .document(sourceDocument)
+                            .build();
+                    return this.conversationRepository.save(newConversation);
+                });
     }
 
     public void deleteConversation(UUID id) {
