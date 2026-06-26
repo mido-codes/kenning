@@ -1,0 +1,158 @@
+<p-toast position="bottom-right" />
+
+<div class="chat-page">
+
+  <!-- Sub-header -->
+  <div class="chat-subheader">
+    <a routerLink="/documents" class="back-link" aria-label="Back to documents">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Documents
+    </a>
+
+    @if (conversation(); as conv) {
+      <div class="separator" aria-hidden="true"></div>
+      <div class="doc-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span class="doc-name" [title]="conv.document.filename">{{ conv.document.filename }}</span>
+      </div>
+    }
+  </div>
+
+  <!-- Message list -->
+  <div class="messages-area" role="log" aria-label="Conversation" aria-live="polite">
+
+    @if (loadingConversation()) {
+      <div class="center-state">
+        <div class="dot-group" aria-label="Loading conversation">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    } @else if (loadError()) {
+      <div class="center-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p class="center-text">Failed to load conversation.</p>
+        <a routerLink="/documents" class="back-link">← Back to documents</a>
+      </div>
+    } @else {
+
+      @if (messages().length === 0 && !sending()) {
+        <div class="empty-chat">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p class="empty-title">Ask about this document</p>
+          <p class="empty-body">Type your question below and the AI will answer using the document's content.</p>
+        </div>
+      }
+
+      @for (msg of messages(); track msg.id) {
+        <div class="msg-row" [class.user-row]="msg.role === 'USER'" [class.assistant-row]="msg.role === 'ASSISTANT'">
+          <div class="bubble" [class.user-bubble]="msg.role === 'USER'" [class.assistant-bubble]="msg.role === 'ASSISTANT'">
+
+            <p class="msg-content">{{ msg.content }}</p>
+
+            @if (msg.role === 'ASSISTANT' && msg.parsedSources.length > 0) {
+              <div class="sources-wrap">
+                <button
+                  type="button"
+                  class="sources-btn"
+                  (click)="toggleSources(msg.id)"
+                  [attr.aria-expanded]="isSourcesExpanded(msg.id)"
+                  aria-controls="sources-{{ msg.id }}"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                  @if (isSourcesExpanded(msg.id)) {
+                    Hide sources
+                  } @else {
+                    Show sources ({{ msg.parsedSources.length }})
+                  }
+                  <svg class="chevron" [class.open]="isSourcesExpanded(msg.id)" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+
+                @if (isSourcesExpanded(msg.id)) {
+                  <div class="sources-list" id="sources-{{ msg.id }}">
+                    @for (src of msg.parsedSources; track $index) {
+                      <div class="source-card">
+                        <span class="match-badge">{{ (src.similarity * 100).toFixed(0) }}% match</span>
+                        <p class="source-text">
+                          @if (isChunkExpanded(msg.id + '-' + $index) || src.content.length <= 300) {
+                            {{ src.content }}
+                          } @else {
+                            {{ src.content.slice(0, 300) }}…
+                          }
+                        </p>
+                        @if (src.content.length > 300) {
+                          <button
+                            type="button"
+                            class="show-more"
+                            (click)="toggleChunk(msg.id + '-' + $index)"
+                          >
+                            {{ isChunkExpanded(msg.id + '-' + $index) ? 'Show less' : 'Show more' }}
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+          </div>
+        </div>
+      }
+
+      @if (sending()) {
+        <div class="msg-row assistant-row">
+          <div class="bubble assistant-bubble thinking-bubble" aria-label="Assistant is thinking">
+            <div class="dot-group">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div #messagesEnd></div>
+    }
+  </div>
+
+  <!-- Input -->
+  @if (!loadingConversation() && !loadError()) {
+    <div class="input-area">
+      <div class="input-row">
+        <textarea
+          #textarea
+          class="q-input"
+          placeholder="Ask a question…"
+          rows="1"
+          [disabled]="sending()"
+          [value]="question()"
+          (input)="onInput($event)"
+          (keydown)="onKeydown($event)"
+          aria-label="Your question"
+        ></textarea>
+        <button
+          type="button"
+          class="send-btn"
+          [disabled]="!hasValidQuestion() || sending()"
+          (click)="send()"
+          aria-label="Send"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+      <p class="input-hint">Enter to send · Shift+Enter for new line</p>
+    </div>
+  }
+
+</div>

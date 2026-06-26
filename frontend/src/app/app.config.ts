@@ -4,7 +4,7 @@ import {
   inject,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import {
   provideHttpClient,
   withInterceptors,
@@ -61,7 +61,7 @@ const KenningPreset = definePreset(Aura, {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(
       withInterceptors([credentialsInterceptor]),
       withXsrfConfiguration({
