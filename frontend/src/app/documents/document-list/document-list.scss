@@ -150,6 +150,39 @@
   font-size: 0.875rem;
 }
 
+/* Clickable ready rows */
+:global(.doc-table tr.row-ready) {
+  cursor: pointer;
+
+  &:hover td {
+    background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+  }
+}
+
+:global(.doc-table tr.row-starting td) {
+  opacity: 0.6;
+}
+
+.actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.starting-spinner {
+  display: flex;
+  align-items: center;
+  color: var(--color-accent);
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .delete-btn {
   display: flex;
   align-items: center;
