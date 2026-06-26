@@ -12,4 +12,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
     List<Conversation> findByUserId(UUID userId);
 
     Optional<Conversation> findByIdAndUserId(UUID id, UUID userId);
+
+    List<Conversation> findByDocumentId(UUID documentId);
+
+    Optional<Conversation> findByDocumentIdAndUserId(UUID documentId, UUID userId);
 }

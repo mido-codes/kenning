@@ -1,8 +1,13 @@
 package io.github.mido.kenning.document;
 
+import io.github.mido.kenning.conversation.Conversation;
+import io.github.mido.kenning.conversation.ConversationRepository;
+import io.github.mido.kenning.conversation.MessageRepository;
 import io.github.mido.kenning.user.CurrentUserService;
 import io.github.mido.kenning.user.User;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -14,11 +19,17 @@ public class DocumentService {
     private final CurrentUserService currentUserService;
     private final DocumentRepository documentRepository;
     private final DocumentProcessingService documentProcessingService;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
+    private final VectorStore vectorStore;
 
-    public DocumentService(CurrentUserService currentUserService, DocumentRepository documentRepository, DocumentProcessingService documentProcessingService) {
+    public DocumentService(CurrentUserService currentUserService, DocumentRepository documentRepository, DocumentProcessingService documentProcessingService, ConversationRepository conversationRepository, MessageRepository messageRepository, VectorStore vectorStore) {
         this.currentUserService = currentUserService;
         this.documentRepository = documentRepository;
         this.documentProcessingService = documentProcessingService;
+        this.conversationRepository = conversationRepository;
+        this.messageRepository = messageRepository;
+        this.vectorStore = vectorStore;
     }
 
 
@@ -33,11 +44,16 @@ public class DocumentService {
         return documentRepository.findByUserId(currentUser.getId());
     }
 
+    @Transactional
     public void deleteDocument(UUID id) {
         User currentUser = currentUserService.getCurrentUser();
         SourceDocument document = documentRepository.findByIdAndUserId(id, currentUser.getId())
-                        .orElseThrow(() -> new DocumentNotFoundException("Document not found: " + id));
+                .orElseThrow(() -> new DocumentNotFoundException("Document not found: " + id));
 
+        List<Conversation> conversations = conversationRepository.findByDocumentId(id);
+        messageRepository.deleteByConversationIn(conversations);
+        conversationRepository.deleteAll(conversations);
+        vectorStore.delete("documentId == '" + id + "'");
         documentRepository.delete(document);
     }
 
